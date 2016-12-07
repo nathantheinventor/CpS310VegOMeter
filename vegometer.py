@@ -26,13 +26,13 @@ __kernel void computeDDVI(
 	{
 		int2 pos = (int2) (get_global_id(0), get_global_id(1));
 
-		uint red1pix = read_imageui(red1, samp, (int2)(x,y));
-		uint nir1pix = read_imageui(nir1, samp, (int2)(x,y));
-		uint red2pix = read_imageui(red2, samp, (int2)(x,y));
-		uint nir2pix = read_imageui(nir2, samp, (int2)(x,y));
+		uint4 red1pix = read_imageui(red1, samp, (int2)(pos.x,pos.y));
+		uint4 nir1pix = read_imageui(nir1, samp, (int2)(pos.x,pos.y));
+		uint4 red2pix = read_imageui(red2, samp, (int2)(pos.x,pos.y));
+		uint4 nir2pix = read_imageui(nir2, samp, (int2)(pos.x,pos.y));
 
-		uint pix1 = (nir1pix - red1pix) / (nir1pix + red1pix);
-		uint pix2 = (nir2pix - red2pix) / (nir2pix + red2pix);
+		uint4 pix1 = (nir1pix - red1pix) / (nir1pix + red1pix);
+		uint4 pix2 = (nir2pix - red2pix) / (nir2pix + red2pix);
 
 		write_imageui(ndvi_output1, pos, pix1);
 		write_imageui(ndvi_output2, pos, pix2);
@@ -42,6 +42,7 @@ __kernel void computeDDVI(
 class clock_it:
 	def __init__(self, msg: str, outSpecifier: str):
 		self._msg = msg
+		self.outSpec = outSpecifier
 	
 	def __enter__(self):
 		self._start = time.perf_counter()
@@ -50,7 +51,7 @@ class clock_it:
 		if exc_type is None:
 			stop = time.perf_counter()
 			span = stop - self._start
-			if('v' in outSpecifier):
+			if('v' in self.outSpec):
 				print("{0}: {1}s".format(self._msg, span))
 
 def print_usage():
@@ -83,9 +84,10 @@ def main(argv):
 		redFile1 = argv[1]
 		nirFile1 = argv[2]
 		redFile2 = argv[3]
-		nirfile2 = argv[4]
+		nirFile2 = argv[4]
 	except IndexError:
 		print_usage()
+		return
 
 	outputCfg = ""
 
@@ -94,7 +96,7 @@ def main(argv):
 					ctx = cl.create_some_context()
 					queue = cl.CommandQueue(ctx)
 					prog = cl.Program(ctx, NDVI_KERNEL).build()
-		with clock_it("loading image data in to numpy"):
+		with clock_it("loading image data in to numpy", outputCfg):
 			red1 = Image.open(redFile1)
 			red2 = Image.open(redFile2)
 			nir1 = Image.open(nirFile1)
