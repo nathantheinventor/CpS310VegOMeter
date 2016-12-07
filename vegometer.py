@@ -11,7 +11,7 @@ import numpy as np
 import pyopencl as cl
 from PIL import Image
 
-MF cl.mem_flags
+MF = cl.mem_flags
 
 NDVI_KERNEL = '''\
 const sampler_t samp = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST; 
@@ -40,18 +40,18 @@ __kernel void computeDDVI(
 '''
 
 class clock_it:
-    def __init__(self, msg: str, outSpecifier: str):
-        self._msg = msg
-    
-    def __enter__(self):
-        self._start = time.perf_counter()
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type is None:
-            stop = time.perf_counter()
-            span = stop - self._start
-            if('v' in outSpecifier):
-            	print("{0}: {1}s".format(self._msg, span))
+	def __init__(self, msg: str, outSpecifier: str):
+		self._msg = msg
+	
+	def __enter__(self):
+		self._start = time.perf_counter()
+	
+	def __exit__(self, exc_type, exc_value, traceback):
+		if exc_type is None:
+			stop = time.perf_counter()
+			span = stop - self._start
+			if('v' in outSpecifier):
+				print("{0}: {1}s".format(self._msg, span))
 
 def print_usage():
 	print("Usage: vegometer.py [options] <img 1: red channel filename> <img1: near-infrared filename> <img 2: red channel filename> <img2: near-infrared filename>")
@@ -90,10 +90,10 @@ def main(argv):
 	outputCfg = ""
 
 	with clock_it("Total Time", outputCfg):
-		with clock_it("Setting up CL" outputCfg):
-			ctx = cl.create_some_context()
-            queue = cl.CommandQueue(ctx)
-            prog = cl.Program(ctx, NDVI_KERNEL).build()
+		with clock_it("Setting up CL", outputCfg):
+					ctx = cl.create_some_context()
+					queue = cl.CommandQueue(ctx)
+					prog = cl.Program(ctx, NDVI_KERNEL).build()
 		with clock_it("loading image data in to numpy"):
 			red1 = Image.open(redFile1)
 			red2 = Image.open(redFile2)
@@ -122,7 +122,7 @@ def main(argv):
 			nir1_input = cl.image_from_array(ctx, nir1Arr, 1)
 			nir2_input = cl.image_from_array(ctx, nir2Arr, 1)
 
-		with clock_it("Creating output CL images"):
+		with clock_it("Creating output CL images", outputCfg):
 			out1_fmt = cl.ImageFormat(cl.channel_order.L, cl.channel_type.UNSIGNED_INT8)
 			output1 = cl.Image(ctx, MF.WRITE_ONLY, output_fmt, shape=(red1_w, red1_h))
 
