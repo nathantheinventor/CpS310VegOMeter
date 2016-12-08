@@ -19,17 +19,27 @@ const sampler_t samp = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE |
 __kernel void computeNDVI(
 	read_only image2d_t red1,
 	read_only image2d_t nir1,
-	write_only image2d_t ndvi_output1 ) 
+	read_only image2d_t red2,
+	read_only image2d_t nir2,
+	write_only image2d_t ndvi_output1) 
 	{
 		int2 pos = (int2) (get_global_id(0), get_global_id(1));
 
 		uint4 red1pix = read_imageui(red1, samp, (int2)(pos.x,pos.y));
 		uint4 nir1pix = read_imageui(nir1, samp, (int2)(pos.x,pos.y));
+		uint4 red2pix = read_imageui(red2, samp, (int2)(pos.x,pos.y));
+		uint4 nir2pix = read_imageui(nir2, samp, (int2)(pos.x,pos.y));
 
 		uint4 pix1 = (0,0,0,0);
 		pix1 = (nir1pix - red1pix) / (nir1pix + red1pix);
+		uint4 pix2 = (0,0,0,0);
+		pix2 = (nir2pix - red2pix) / (nir2pix + red2pix);
 
-		write_imageui(ndvi_output1, pos, pix1);
+		uint4 delta_pix = (0,0,0,0);
+
+		delta_pix = pix1 - pix2;
+
+		write_imageui(ndvi_output1, pos, delta_pix);
 	}
 '''
 
@@ -124,21 +134,22 @@ def main(argv):
 			output2 = cl.Image(ctx, MF.WRITE_ONLY, out1_fmt, shape=(red2_w, red2_h))
 
 		with clock_it("Computing NDVI", outputCfg):
-			with clock_it("running NDVI kernel on first image", outputCfg):
-				prog.computeNDVI(queue, (red1_w, red1_h), None, red1_input, nir1_input, output1)
+			with clock_it("running NDVI", outputCfg):
+				prog.computeNDVI(queue, (red1_w, red1_h), None, red1_input, nir1_input, red2_input, nir2_input, output1)
 
 			out1_array = np.empty_like(red1Arr)
 			cl.enqueue_copy(queue, out1_array, output1, origin=(0,0), region=(red1_w,red1_h))
 
 			ndvi1_img = Image.fromarray(out1_array).convert("L")
+			ndvi1_img.show()
 
-			with clock_it("Running kerenl on second image", outputCfg):
-				prog.computeNDVI(queue, (red2_w, red2_h), None, red2_input, nir2_input, output2)
+			# with clock_it("Running kerenl on second image", outputCfg):
+			# 	prog.computeNDVI(queue, (red2_w, red2_h), None, red2_input, nir2_input, output2)
 
-			out2_array = np.empty_like(red2Arr)
-			cl.enqueue_copy(queue, out2_array, output2, origin=(0,0), region=(red2_w,red2_h))
+			# out2_array = np.empty_like(red2Arr)
+			# cl.enqueue_copy(queue, out2_array, output2, origin=(0,0), region=(red2_w,red2_h))
 
-			ndvi2_img = Image.fromarray(out2_array).convert("L")
+			# ndvi2_img = Image.fromarray(out2_array).convert("L")
 
 if __name__ == '__main__':
 	main(sys.argv)
