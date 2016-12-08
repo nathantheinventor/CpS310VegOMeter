@@ -16,7 +16,7 @@ MF = cl.mem_flags
 NDVI_KERNEL = '''\
 const sampler_t samp = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST; 
 
-__kernel void computeDDVI(
+__kernel void computeNDVI(
 	read_only image2d_t red1,
 	read_only image2d_t nir1,
 	read_only image2d_t red2,
@@ -65,7 +65,7 @@ def print_help():
 
 def main(argv):
 
-	verbose = False
+	outputCfg = ""
 
 	if("-h" in argv or "--help" in argv):
 		print_help()
@@ -75,7 +75,7 @@ def main(argv):
 			argv.remove("--help")
 		return
 	if("-v" in argv or "--verbose" in argv):
-		verbose = True
+		outputCfg += 'v'
 		if("-v" in argv):
 			argv.remove("-v")
 		else:
@@ -88,8 +88,6 @@ def main(argv):
 	except IndexError:
 		print_usage()
 		return
-
-	outputCfg = ""
 
 	with clock_it("Total Time", outputCfg):
 		with clock_it("Setting up CL", outputCfg):
@@ -125,11 +123,25 @@ def main(argv):
 			nir2_input = cl.image_from_array(ctx, nir2Arr, 1)
 
 		with clock_it("Creating output CL images", outputCfg):
-			out1_fmt = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNSIGNED_INT8)
+			out1_fmt = cl.ImageFormat(cl.channel_order.INTENSITY, cl.channel_type.UNSIGNED_INT8)
 			output1 = cl.Image(ctx, MF.WRITE_ONLY, out1_fmt, shape=(red1_w, red1_h))
 
-			out2_fmt = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNSIGNED_INT8)
+			out2_fmt = cl.ImageFormat(cl.channel_order.INTENSITY, cl.channel_type.UNSIGNED_INT8)
 			output2 = cl.Image(ctx, MF.WRITE_ONLY, out1_fmt, shape=(red1_w, red1_h))
+
+		with clock_it("Running compute NDVI kernel", outputCfg):
+			prog.computeNDVI(queue, (red1_w, red1_h), None, red1_input, nir1_input, red2_input, nir2_input, output1, output2)
+
+		with clock_it("capturing ndvi image to array", outputCfg):
+			out1_array = np.empty_like(red1_input)
+			cl.enqueue_copy(queue, out1_array, output1, origin=(0,0), region=(red1_w,red1_h))
+
+			out2_array = np.empty_like(red2_input)
+			cl.enqueue_copy(queue, out2_array, output2, origin=(0,0), region=(red2_w,red2_h))
+
+		with clock_it("Capturing NDVI output", outputCfg):
+			ndvi1_img = Image.fromarrayt(output1).convert("L")
+			ndvi1_img.show()
 
 if __name__ == '__main__':
 	main(sys.argv)
