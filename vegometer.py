@@ -110,26 +110,26 @@ def main(argv):
 			
 			# load img data into numpy	
 			red1Arr = np.asarray(red1, dtype=np.uint8)
-			red1_h, red1_w, _ = red1Arr.shape
+			red1_h, red1_w = red1Arr.shape
 			red2Arr = np.asarray(red2, dtype=np.uint8)
-			red2_h, red2_w, _ = red2Arr.shape
+			red2_h, red2_w = red2Arr.shape
 			nir1Arr = np.asarray(nir1, dtype=np.uint8)
-			nir1_h, nir1_w, _ = nir1Arr.shape
+			nir1_h, nir1_w = nir1Arr.shape
 			nir2Arr = np.asarray(nir2, dtype=np.uint8)
-			nir2_h, nir2_w, _ = nir2Arr.shape
+			nir2_h, nir2_w = nir2Arr.shape
 
-		with clock_it("Generating CL image". outputCfg):
+		with clock_it("Generating CL image", outputCfg):
 			red1_input = cl.image_from_array(ctx, red1Arr, 1)
 			red2_input = cl.image_from_array(ctx, red2Arr, 1)
 			nir1_input = cl.image_from_array(ctx, nir1Arr, 1)
 			nir2_input = cl.image_from_array(ctx, nir2Arr, 1)
 
 		with clock_it("Creating output CL images", outputCfg):
-			out1_fmt = cl.ImageFormat(cl.channel_order.L, cl.channel_type.UNSIGNED_INT8)
-			output1 = cl.Image(ctx, MF.WRITE_ONLY, output_fmt, shape=(red1_w, red1_h))
+			out1_fmt = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNSIGNED_INT8)
+			output1 = cl.Image(ctx, MF.WRITE_ONLY, out1_fmt, shape=(red1_w, red1_h))
 
-			out2_fmt = cl.ImageFormat(cl.channel_order.L, cl.channel_type.UNSIGNED_INT8)
-			output2 = cl.Image(ctx, MF.WRITE_ONLY, output_fmt, shape=(red1_w, red1_h))
+			out2_fmt = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNSIGNED_INT8)
+			output2 = cl.Image(ctx, MF.WRITE_ONLY, out1_fmt, shape=(red1_w, red1_h))
 
 if __name__ == '__main__':
 	main(sys.argv)
